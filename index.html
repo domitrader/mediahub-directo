@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+  <title>MediaHub Directo | Directorio de Descargadores Web Gratuitos</title>
+  <meta name="description" content="Acceso directo a descargadores web gratuitos sin registro, ordenados por plataforma. Descarga vídeo y audio de YouTube, X, Instagram, TikTok y Facebook sin instalar nada.">
+  <meta name="keywords" content="descargar video, descargar audio, cobalt, cnvmp3, ssstwitter, snapinsta, snaptik, sin registro, sin programas">
+  <meta name="author" content="MediaHub Directo">
+  <meta name="theme-color" content="#0B0F19">
+
+  <!-- Open Graph / Redes Sociales -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="MediaHub Directo | Descargadores Web Gratuitos Sin Registro">
+  <meta property="og:description" content="Directorio curado de herramientas web gratuitas sin registro para descargar vídeo y audio organizadas por plataforma.">
+  <meta property="og:image" content="icon.svg">
+  <meta property="twitter:card" content="summary_large_image">
+
+  <!-- PWA & Favicon -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MediaHub">
+
+  <!-- Estilos CSS3 Modulares -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ==========================================================================
+       CABECERA COMPACTA
+       ========================================================================== -->
+  <header class="site-header" role="banner">
+    <div class="container header-content">
+      
+      <!-- Identidad y Marca -->
+      <div class="brand-wrapper">
+        <div class="brand-identity">
+          <div class="brand-logo-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 12V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6" stroke="#00E5FF" stroke-width="2" stroke-linecap="round"/>
+              <path d="M12 3v13m0 0-4-4m4 4 4-4" stroke="#D4AF37" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M3 17a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3" stroke="#00E5FF" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="brand-title-group">
+            <h1 class="site-title">MediaHub <span class="accent">Directo</span></h1>
+            <p class="site-subtitle">Acceso directo a descargadores web gratuitos sin registro, ordenados por plataforma.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones de Cabecera: Botón de Portapapeles & Buscador Instantáneo -->
+      <div class="header-actions">
+        <!-- Botón Verificación Rápida / Portapapeles -->
+        <button id="btn-quick-verify" class="btn-clipboard-verify" type="button" aria-label="Verificar enlace o pegar desde el portapapeles">
+          <span class="icon" aria-hidden="true">📋</span>
+          <span>Pegar enlace / Verificación rápida</span>
+        </button>
+
+        <!-- Buscador Instantáneo en tiempo real -->
+        <div class="search-wrapper" role="search">
+          <div class="search-input-container">
+            <span class="search-icon" aria-hidden="true">🔍</span>
+            <input 
+              type="text" 
+              id="search-input" 
+              class="search-input" 
+              placeholder="Buscar por nombre, red social (YouTube, Instagram...) o etiqueta..." 
+              autocomplete="off" 
+              spellcheck="false"
+              aria-label="Buscar herramientas">
+            <button id="search-clear-btn" class="search-clear-btn" type="button" aria-label="Limpiar búsqueda">✕</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ==========================================================================
+       BARRA DE FILTROS HORIZONTALES (Pills deslizables)
+       ========================================================================== -->
+  <nav class="categories-nav-section" aria-label="Categorías de plataformas">
+    <div class="container">
+      <div class="categories-scroll" id="categories-container" role="tablist">
+        <button class="cat-pill active" data-category="all" role="tab" aria-selected="true">
+          <span>Todas</span>
+        </button>
+        <button class="cat-pill" data-category="favoritos" role="tab" aria-selected="false">
+          <span>★ Favoritas</span>
+          <span class="fav-count" id="fav-counter" style="display: none;">0</span>
+        </button>
+        <button class="cat-pill" data-category="multiplataforma" role="tab" aria-selected="false">
+          <span>Multiplataforma</span>
+        </button>
+        <button class="cat-pill" data-category="youtube" role="tab" aria-selected="false">
+          <span>YouTube</span>
+        </button>
+        <button class="cat-pill" data-category="x-twitter" role="tab" aria-selected="false">
+          <span>X (Twitter)</span>
+        </button>
+        <button class="cat-pill" data-category="instagram" role="tab" aria-selected="false">
+          <span>Instagram</span>
+        </button>
+        <button class="cat-pill" data-category="tiktok-fb" role="tab" aria-selected="false">
+          <span>TikTok y Facebook</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ==========================================================================
+       CONTENIDO PRINCIPAL
+       ========================================================================== -->
+  <main class="container" id="main-content" role="main">
+
+    <!-- Banner informativo cuando se detecta un enlace de plataforma -->
+    <div id="quick-detect-banner" class="quick-detect-banner" role="status" aria-live="polite">
+      <div class="banner-left">
+        <span class="banner-icon" aria-hidden="true">⚡</span>
+        <span id="banner-text">Enlace detectado. Mostrando herramientas compatibles.</span>
+      </div>
+      <button id="banner-dismiss-btn" class="banner-dismiss" type="button" aria-label="Cerrar aviso">✕</button>
+    </div>
+
+    <!-- Barra de Estado / Contador de Resultados -->
+    <div class="results-summary">
+      <div class="results-count">
+        Mostrando <span id="tools-count">0</span> herramientas en <span id="active-category-name" class="active-filter-tag">Todas</span>
+      </div>
+      <div id="filter-hint" class="filter-hint"></div>
+    </div>
+
+    <!-- Grid de Tarjetas de Herramientas -->
+    <div id="tools-grid" class="tools-grid" aria-live="polite">
+      <!-- Generado dinámicamente mediante app.js -->
+    </div>
+
+    <!-- Estado Vacío (Sin resultados) -->
+    <div id="empty-state" class="empty-state" aria-hidden="true">
+      <div class="empty-icon" aria-hidden="true">🔎</div>
+      <h3 class="empty-title">No encontramos herramientas coincidentes</h3>
+      <p class="empty-desc">Prueba a buscar otro término, cambiar de categoría o restablecer los filtros activos.</p>
+      <button id="btn-reset-filters" class="btn-reset-filters" type="button">
+        <span>Restablecer filtros</span> ↺
+      </button>
+    </div>
+
+  </main>
+
+  <!-- ==========================================================================
+       MODAL DE VERIFICACIÓN RÁPIDA / PEGAR ENLACE
+       ========================================================================== -->
+  <div id="verify-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title-elem">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 id="modal-title-elem" class="modal-title">
+          <span aria-hidden="true">🎯</span> Verificador de Enlace
+        </h2>
+        <button id="modal-close-btn" class="modal-close-btn" type="button" aria-label="Cerrar ventana">✕</button>
+      </div>
+
+      <p class="modal-desc">
+        Pega la URL de la publicación o vídeo (YouTube, TikTok, Instagram, X, Facebook, etc.) y filtraremos al instante los descargadores directos recomendados:
+      </p>
+
+      <form id="verify-form" class="modal-form" onsubmit="return false;">
+        <div class="modal-input-group">
+          <input 
+            type="url" 
+            id="verify-url-input" 
+            class="modal-input" 
+            placeholder="https://www.instagram.com/reel/... o https://youtu.be/..." 
+            required>
+          <button type="submit" id="btn-submit-verify" class="modal-btn-submit">
+            Identificar
+          </button>
+        </div>
+      </form>
+
+      <button type="button" id="btn-modal-paste-clipboard" class="modal-paste-quick">
+        📋 Pegar automáticamente desde el portapapeles
+      </button>
+
+      <div id="modal-result" class="modal-result"></div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       CONTENEDOR DE TOASTS
+       ========================================================================== -->
+  <div id="toast-container" class="toast-container" aria-live="assertive"></div>
+
+  <!-- ==========================================================================
+       PIE DE PÁGINA LIMPIO & AVISO LEGAL
+       ========================================================================== -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="container footer-content">
+      
+      <!-- Aviso Informativo sobre Derechos y Servicios de Terceros -->
+      <div class="footer-disclaimer-box">
+        <h3 class="disclaimer-title">
+          <span aria-hidden="true">⚖️</span> Aviso legal e informativo
+        </h3>
+        <p class="disclaimer-text">
+          <strong>MediaHub Directo</strong> es un directorio exclusivamente informativo y curado de enlaces públicos a herramientas web gratuitas e independientes de terceros. 
+          Este portal no aloja, retransmite, almacena ni procesa archivos audiovisuales en servidores propios. Cada servicio vinculado opera bajo sus propios términos y políticas. 
+          Se recuerda a las personas usuarias el deber de respetar las leyes de propiedad intelectual y derechos de autor vigentes, así como las condiciones de uso de cada plataforma emisora al interactuar con contenidos públicos o de autoría propia.
+        </p>
+      </div>
+
+      <!-- Pie Inferior con Enlaces y Créditos -->
+      <div class="footer-bottom">
+        <div>
+          &copy; <span id="current-year">2026</span> MediaHub Directo &bull; Herramientas web sin registro ni instalación.
+        </div>
+        <div class="footer-links">
+          <a href="#main-content" class="footer-link">Subir ↑</a>
+          <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub</a>
+          <span class="footer-link">PWA Ready ⚡</span>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- Archivos de Datos y Lógica JavaScript Vanilla ES6+ -->
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

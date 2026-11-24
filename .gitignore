@@ -1,0 +1,11 @@
+# Dotfiles y carpetas del entorno
+.*
+!.gitignore
+!.github
+.android/
+.gemini/
+.gradle/
+upload/
+node_modules/
+dist/
+*.log

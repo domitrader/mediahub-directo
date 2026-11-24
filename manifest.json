@@ -1,0 +1,19 @@
+{
+  "name": "MediaHub Directo",
+  "short_name": "MediaHub",
+  "description": "Acceso directo a descargadores web gratuitos sin registro, ordenados por plataforma.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0B0F19",
+  "theme_color": "#0B0F19",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "media", "productivity"]
+}
