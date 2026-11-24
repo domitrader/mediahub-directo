@@ -2,7 +2,7 @@
    MediaHub Directo - Service Worker (PWA Offline Cache)
    ========================================================================== */
 
-const CACHE_NAME = 'mediahub-v1';
+const CACHE_NAME = 'mediahub-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

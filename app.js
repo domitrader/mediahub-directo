@@ -1,22 +1,41 @@
 /**
  * MediaHub Directo - JavaScript ES6+
  * Directorio curado de descargadores web gratuitos sin registro.
+ * Incluye Modo Gestión/Edición (Añadir enlaces, Editar datos y Borrar herramientas).
  */
 
 (function () {
   'use strict';
 
   // ==========================================================================
+  // CLAVES DE ALMACENAMIENTO (localStorage)
+  // ==========================================================================
+  const STORAGE_KEY_CATALOG = 'mediahub_catalog';
+  const STORAGE_KEY_FAVORITES = 'mediahub_favorites';
+  const STORAGE_KEY_EDIT_MODE = 'mediahub_edit_mode';
+
+  // ==========================================================================
   // ESTADO DE LA APLICACIÓN
   // ==========================================================================
-  const STORAGE_KEY_FAVORITES = 'mediahub_favorites';
-  
   const state = {
-    tools: Array.isArray(window.TOOLS_DIRECTORY) ? window.TOOLS_DIRECTORY : [],
+    tools: [],
     activeCategory: 'all',
     searchQuery: '',
     favorites: new Set(),
-    detectedPlatform: null
+    isEditMode: true,
+    detectedPlatform: null,
+    pendingDeleteId: null
+  };
+
+  // Nombres y etiquetas oficiales de categorías
+  const CATEGORY_NAMES = {
+    all: 'Todas',
+    favoritos: 'Favoritas',
+    multiplataforma: 'Multiplataforma',
+    youtube: 'YouTube',
+    'x-twitter': 'X (Twitter)',
+    instagram: 'Instagram',
+    'tiktok-fb': 'TikTok y Facebook'
   };
 
   // ==========================================================================
@@ -33,13 +52,43 @@
     searchInput: document.getElementById('search-input'),
     searchClearBtn: document.getElementById('search-clear-btn'),
     btnResetFilters: document.getElementById('btn-reset-filters'),
-    
+    btnEmptyAddTool: document.getElementById('btn-empty-add-tool'),
+
+    // Modo Edición / Gestión
+    btnToggleEdit: document.getElementById('btn-toggle-edit'),
+    adminManagementBar: document.getElementById('admin-management-bar'),
+    btnAdminAddTool: document.getElementById('btn-admin-add-tool'),
+    btnAdminExportData: document.getElementById('btn-admin-export-data'),
+    btnAdminResetData: document.getElementById('btn-admin-reset-data'),
+
+    // Modal Editor de Sitios
+    toolEditorModal: document.getElementById('tool-editor-modal'),
+    modalEditorCloseBtn: document.getElementById('modal-editor-close-btn'),
+    modalEditorCancelBtn: document.getElementById('modal-editor-cancel-btn'),
+    toolEditorForm: document.getElementById('tool-editor-form'),
+    editorTitleText: document.getElementById('editor-title-text'),
+    formToolId: document.getElementById('form-tool-id'),
+    formToolName: document.getElementById('form-tool-name'),
+    formToolCategory: document.getElementById('form-tool-category'),
+    formToolUrl: document.getElementById('form-tool-url'),
+    formToolPlatforms: document.getElementById('form-tool-platforms'),
+    formToolDesc: document.getElementById('form-tool-desc'),
+    formToolBadges: document.getElementById('form-tool-badges'),
+    formToolFeatured: document.getElementById('form-tool-featured'),
+
+    // Modal Confirmación de Borrado
+    deleteConfirmModal: document.getElementById('delete-confirm-modal'),
+    modalDeleteCloseBtn: document.getElementById('modal-delete-close-btn'),
+    modalDeleteCancelBtn: document.getElementById('modal-delete-cancel-btn'),
+    modalDeleteConfirmBtn: document.getElementById('modal-delete-confirm-btn'),
+    deleteConfirmMessage: document.getElementById('delete-confirm-message'),
+
     // Banner Inteligente
     quickDetectBanner: document.getElementById('quick-detect-banner'),
     bannerText: document.getElementById('banner-text'),
     bannerDismissBtn: document.getElementById('banner-dismiss-btn'),
 
-    // Acciones de Verificación / Modal
+    // Verificación Rápida / Portapapeles
     btnQuickVerify: document.getElementById('btn-quick-verify'),
     verifyModal: document.getElementById('verify-modal'),
     modalCloseBtn: document.getElementById('modal-close-btn'),
@@ -48,31 +97,106 @@
     btnModalPasteClipboard: document.getElementById('btn-modal-paste-clipboard'),
     modalResult: document.getElementById('modal-result'),
 
-    // Toast y Footer
+    // Toast y Pie
     toastContainer: document.getElementById('toast-container'),
     currentYear: document.getElementById('current-year')
-  };
-
-  // Nombres amigables de categorías
-  const CATEGORY_NAMES = {
-    all: 'Todas',
-    favoritos: 'Favoritas',
-    multiplataforma: 'Multiplataforma',
-    youtube: 'YouTube',
-    'x-twitter': 'X (Twitter)',
-    instagram: 'Instagram',
-    'tiktok-fb': 'TikTok y Facebook'
   };
 
   // ==========================================================================
   // INICIALIZACIÓN
   // ==========================================================================
   function init() {
+    loadCatalog();
     loadFavorites();
+    loadEditMode();
     setupYear();
     registerEventListeners();
     registerServiceWorker();
     render();
+  }
+
+  // ==========================================================================
+  // GESTIÓN DEL CATÁLOGO (localStorage)
+  // ==========================================================================
+  function loadCatalog() {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_CATALOG);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          state.tools = parsed;
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Error leyendo catálogo de localStorage:', e);
+    }
+
+    // Si no hay datos guardados, usamos los predeterminados de data.js
+    if (Array.isArray(window.TOOLS_DIRECTORY)) {
+      state.tools = JSON.parse(JSON.stringify(window.TOOLS_DIRECTORY));
+    } else {
+      state.tools = [];
+    }
+  }
+
+  function saveCatalog() {
+    try {
+      localStorage.setItem(STORAGE_KEY_CATALOG, JSON.stringify(state.tools));
+    } catch (e) {
+      console.warn('Error guardando catálogo en localStorage:', e);
+    }
+  }
+
+  function resetCatalogToDefault() {
+    if (!Array.isArray(window.TOOLS_DIRECTORY)) return;
+    state.tools = JSON.parse(JSON.stringify(window.TOOLS_DIRECTORY));
+    try {
+      localStorage.removeItem(STORAGE_KEY_CATALOG);
+    } catch (e) {
+      console.warn(e);
+    }
+    render();
+    showToast('Catálogo inicial de 11 herramientas restablecido.', 'default');
+  }
+
+  // ==========================================================================
+  // GESTIÓN DE MODO EDICIÓN
+  // ==========================================================================
+  function loadEditMode() {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_EDIT_MODE);
+      // Por defecto activo para responder a la petición del usuario
+      state.isEditMode = stored !== null ? stored === 'true' : true;
+    } catch (e) {
+      state.isEditMode = true;
+    }
+    applyEditModeUI();
+  }
+
+  function toggleEditMode() {
+    state.isEditMode = !state.isEditMode;
+    try {
+      localStorage.setItem(STORAGE_KEY_EDIT_MODE, String(state.isEditMode));
+    } catch (e) {}
+    applyEditModeUI();
+    showToast(state.isEditMode ? '🛠️ Modo Edición activado' : '👁️ Modo Vista normal activado', 'default');
+  }
+
+  function applyEditModeUI() {
+    if (state.isEditMode) {
+      document.body.classList.add('edit-mode-active');
+      if (DOM.btnToggleEdit) {
+        DOM.btnToggleEdit.setAttribute('aria-pressed', 'true');
+        DOM.btnToggleEdit.title = 'Desactivar modo edición';
+      }
+    } else {
+      document.body.classList.remove('edit-mode-active');
+      if (DOM.btnToggleEdit) {
+        DOM.btnToggleEdit.setAttribute('aria-pressed', 'false');
+        DOM.btnToggleEdit.title = 'Activar modo edición';
+      }
+    }
   }
 
   // ==========================================================================
@@ -158,7 +282,7 @@
       if (!normalizedQuery) return true;
 
       const nameMatch = normalizeText(tool.name).includes(normalizedQuery);
-      const categoryMatch = normalizeText(tool.categoryLabel).includes(normalizedQuery);
+      const categoryMatch = normalizeText(tool.categoryLabel || tool.category).includes(normalizedQuery);
       const descMatch = normalizeText(tool.description).includes(normalizedQuery);
       
       const platformsMatch = Array.isArray(tool.platforms) && 
@@ -231,7 +355,7 @@
           <div class="card-header">
             <div class="card-title-area">
               <div class="card-meta-top">
-                <span class="badge-category">${escapeHTML(tool.categoryLabel || tool.category)}</span>
+                <span class="badge-category">${escapeHTML(tool.categoryLabel || CATEGORY_NAMES[tool.category] || tool.category)}</span>
                 ${isFeatured ? '<span class="badge-featured" title="Recomendada por la comunidad">★ Recomendada</span>' : ''}
               </div>
               <h2 class="tool-name">${escapeHTML(tool.name)}</h2>
@@ -265,6 +389,16 @@
           </div>
         </div>
 
+        <!-- Acciones del Modo Edición (Editar / Borrar) -->
+        <div class="card-admin-actions">
+          <button type="button" class="btn-card-edit" data-tool-id="${escapeHTML(tool.id)}" title="Editar enlace o información">
+            <span>✏️ Editar</span>
+          </button>
+          <button type="button" class="btn-card-delete" data-tool-id="${escapeHTML(tool.id)}" data-tool-name="${escapeHTML(tool.name)}" title="Eliminar este sitio">
+            <span>🗑️ Borrar</span>
+          </button>
+        </div>
+
         <!-- Botón de apertura directa -->
         <div class="card-footer">
           <a 
@@ -289,6 +423,170 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  // ==========================================================================
+  // OPERACIONES CRUD (AÑADIR, EDITAR Y BORRAR SITIOS)
+  // ==========================================================================
+  function openAddToolModal() {
+    DOM.toolEditorForm.reset();
+    DOM.formToolId.value = '';
+    DOM.editorTitleText.textContent = 'Añadir Nuevo Sitio';
+    DOM.formToolCategory.value = state.activeCategory !== 'all' && state.activeCategory !== 'favoritos' 
+      ? state.activeCategory 
+      : 'multiplataforma';
+    DOM.toolEditorModal.classList.add('open');
+    DOM.formToolName.focus();
+  }
+
+  function openEditToolModal(toolId) {
+    const tool = state.tools.find(t => t.id === toolId);
+    if (!tool) return;
+
+    DOM.formToolId.value = tool.id;
+    DOM.formToolName.value = tool.name;
+    DOM.formToolUrl.value = tool.url;
+    DOM.formToolCategory.value = tool.category;
+    DOM.formToolPlatforms.value = Array.isArray(tool.platforms) ? tool.platforms.join(', ') : '';
+    DOM.formToolDesc.value = tool.description || '';
+    DOM.formToolBadges.value = Array.isArray(tool.badges) ? tool.badges.join(', ') : '';
+    DOM.formToolFeatured.checked = Boolean(tool.featured);
+
+    DOM.editorTitleText.textContent = `Editar Sitio: ${tool.name}`;
+    DOM.toolEditorModal.classList.add('open');
+    DOM.formToolName.focus();
+  }
+
+  function closeToolEditorModal() {
+    DOM.toolEditorModal.classList.remove('open');
+    DOM.toolEditorForm.reset();
+  }
+
+  function handleSaveToolSubmit(e) {
+    e.preventDefault();
+
+    const name = DOM.formToolName.value.trim();
+    const url = DOM.formToolUrl.value.trim();
+    const category = DOM.formToolCategory.value;
+    const categoryLabel = CATEGORY_NAMES[category] || category;
+    const desc = DOM.formToolDesc.value.trim();
+    const featured = DOM.formToolFeatured.checked;
+
+    // Procesar plataformas
+    const platformsRaw = DOM.formToolPlatforms.value.trim();
+    const platforms = platformsRaw 
+      ? platformsRaw.split(',').map(p => p.trim()).filter(Boolean)
+      : [categoryLabel];
+
+    // Procesar badges
+    const badgesRaw = DOM.formToolBadges.value.trim();
+    let badges = badgesRaw 
+      ? badgesRaw.split(',').map(b => b.trim()).filter(Boolean)
+      : ['Gratis', 'Sin registro', 'MP4'];
+
+    const editingId = DOM.formToolId.value;
+
+    if (editingId) {
+      // Modo Edición
+      const toolIndex = state.tools.findIndex(t => t.id === editingId);
+      if (toolIndex !== -1) {
+        state.tools[toolIndex] = {
+          ...state.tools[toolIndex],
+          name,
+          url,
+          category,
+          categoryLabel,
+          platforms,
+          description: desc,
+          badges,
+          featured
+        };
+        saveCatalog();
+        render();
+        closeToolEditorModal();
+        showToast(`Sitio "${name}" actualizado con éxito.`, 'gold');
+      }
+    } else {
+      // Modo Nuevo
+      // Generar slug/id único
+      const baseSlug = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const uniqueId = baseSlug ? `${baseSlug}-${Date.now().toString(36).slice(-4)}` : `tool-${Date.now()}`;
+
+      const newTool = {
+        id: uniqueId,
+        name,
+        category,
+        categoryLabel,
+        platforms,
+        url,
+        description: desc,
+        badges,
+        featured
+      };
+
+      state.tools.unshift(newTool); // Aparece al principio para fácil revisión
+      saveCatalog();
+      render();
+      closeToolEditorModal();
+      showToast(`¡Sitio "${name}" añadido al catálogo!`, 'gold');
+    }
+  }
+
+  function promptDeleteTool(toolId, toolName) {
+    state.pendingDeleteId = toolId;
+    if (DOM.deleteConfirmMessage) {
+      DOM.deleteConfirmMessage.innerHTML = `¿Seguro que deseas eliminar <strong>${escapeHTML(toolName)}</strong> del directorio? Esta acción no se puede deshacer en tu sesión actual.`;
+    }
+    DOM.deleteConfirmModal.classList.add('open');
+  }
+
+  function closeDeleteConfirmModal() {
+    state.pendingDeleteId = null;
+    DOM.deleteConfirmModal.classList.remove('open');
+  }
+
+  function confirmDeleteTool() {
+    if (!state.pendingDeleteId) return;
+
+    const toolToDelete = state.tools.find(t => t.id === state.pendingDeleteId);
+    const toolName = toolToDelete ? toolToDelete.name : 'Sitio';
+
+    state.tools = state.tools.filter(t => t.id !== state.pendingDeleteId);
+    state.favorites.delete(state.pendingDeleteId);
+
+    saveCatalog();
+    saveFavorites();
+    render();
+    closeDeleteConfirmModal();
+    showToast(`"${toolName}" ha sido eliminado del directorio.`, 'default');
+  }
+
+  // Exportar datos actuales a formato data.js (para cuando el usuario decida bloquear la web)
+  function exportDataToClipboard() {
+    const formattedData = `const TOOLS_DIRECTORY = ${JSON.stringify(state.tools, null, 2)};\n\nif (typeof window !== "undefined") {\n  window.TOOLS_DIRECTORY = TOOLS_DIRECTORY;\n}\nif (typeof module !== "undefined" && module.exports) {\n  module.exports = TOOLS_DIRECTORY;\n}`;
+
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      navigator.clipboard.writeText(formattedData)
+        .then(() => {
+          showToast('📋 ¡Datos copiados al portapapeles! Listo para pegarlos.', 'gold');
+        })
+        .catch(() => {
+          downloadDataAsFile(formattedData);
+        });
+    } else {
+      downloadDataAsFile(formattedData);
+    }
+  }
+
+  function downloadDataAsFile(content) {
+    const blob = new Blob([content], { type: 'application/javascript;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'data.js';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Archivo data.js descargado con tus cambios.', 'gold');
   }
 
   // ==========================================================================
@@ -359,19 +657,15 @@
   function applyDetectedCategory(platformInfo) {
     if (!platformInfo) return;
 
-    // Cambiar categoría activa
     setCategory(platformInfo.id);
 
-    // Mostrar banner informativo
     if (DOM.quickDetectBanner && DOM.bannerText) {
       DOM.bannerText.textContent = platformInfo.message;
       DOM.quickDetectBanner.classList.add('visible');
     }
 
-    // Mostrar notificación Toast
     showToast(`⚡ Enlace de ${platformInfo.name} reconocido`, 'gold');
 
-    // Desplazar suavemente a los resultados
     const mainContent = document.getElementById('main-content');
     if (mainContent) {
       mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -379,10 +673,9 @@
   }
 
   // ==========================================================================
-  // MANEJO DEL PORTAPAPELES Y MODAL
+  // MANEJO DEL PORTAPAPELES Y MODAL DE VERIFICACIÓN
   // ==========================================================================
   async function handleQuickVerifyClick() {
-    // 1. Intentar leer automáticamente el portapapeles si la API está disponible
     if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
       try {
         const text = await navigator.clipboard.readText();
@@ -392,24 +685,20 @@
           applyDetectedCategory(detected);
           return;
         } else if (text && text.startsWith('http')) {
-          // Es URL pero plataforma no directa -> abrir modal con la URL ya puesta
           openVerifyModal(text);
           return;
         }
       } catch (err) {
-        // En muchos navegadores móviles, el acceso directo requiere permiso previo o gesto explícito
-        console.info('Acceso automático al portapapeles no concedido, abriendo modal interactivo:', err);
+        console.info('Acceso automático al portapapeles no concedido:', err);
       }
     }
 
-    // 2. Si no se detectó URL directa o no hubo permiso, abrir el modal de verificación rápida
     openVerifyModal();
   }
 
   function openVerifyModal(prefillValue = '') {
     if (!DOM.verifyModal) return;
     DOM.verifyModal.classList.add('open');
-    DOM.verifyModal.setAttribute('aria-hidden', 'false');
 
     if (DOM.modalResult) {
       DOM.modalResult.className = 'modal-result';
@@ -425,7 +714,6 @@
   function closeVerifyModal() {
     if (!DOM.verifyModal) return;
     DOM.verifyModal.classList.remove('open');
-    DOM.verifyModal.setAttribute('aria-hidden', 'true');
   }
 
   async function pasteIntoModalFromClipboard() {
@@ -450,7 +738,7 @@
     if (detected) {
       if (DOM.modalResult) {
         DOM.modalResult.className = 'modal-result success visible';
-        DOM.modalResult.textContent = `✓ Reconocido como ${detected.name}. Redirigiendo a las herramientas óptimas...`;
+        DOM.modalResult.textContent = `✓ Reconocido como ${detected.name}. Mostrando herramientas óptimas...`;
       }
       setTimeout(() => {
         closeVerifyModal();
@@ -459,7 +747,7 @@
     } else if (urlString && (urlString.startsWith('http://') || urlString.startsWith('https://'))) {
       if (DOM.modalResult) {
         DOM.modalResult.className = 'modal-result warning visible';
-        DOM.modalResult.textContent = 'Enlace genérico detectado. Te recomendamos probar Cobalt o SaveFrom en la categoría Multiplataforma.';
+        DOM.modalResult.textContent = 'Enlace genérico detectado. Te recomendamos probar las herramientas Multiplataforma.';
       }
       setTimeout(() => {
         closeVerifyModal();
@@ -479,14 +767,12 @@
   function setCategory(categoryKey) {
     state.activeCategory = categoryKey;
 
-    // Actualizar estilos activos de las píldoras
     DOM.categoryPills.forEach(pill => {
       const pillCat = pill.dataset.category;
       const isActive = pillCat === categoryKey;
       pill.classList.toggle('active', isActive);
       pill.setAttribute('aria-selected', isActive ? 'true' : 'false');
 
-      // Scroll horizontal automático si la píldora queda fuera de pantalla
       if (isActive && DOM.categoriesContainer) {
         const containerRect = DOM.categoriesContainer.getBoundingClientRect();
         const pillRect = pill.getBoundingClientRect();
@@ -565,49 +851,91 @@
       setCategory('all');
     });
 
-    // 5. Clics en la cuadrícula (delegación para favoritos)
+    // 5. Clics en la cuadrícula (delegación para favoritos, editar y borrar)
     DOM.toolsGrid.addEventListener('click', (e) => {
+      // Favoritos
       const favBtn = e.target.closest('.btn-favorite');
       if (favBtn) {
         e.preventDefault();
         const toolId = favBtn.dataset.toolId;
         const toolName = favBtn.dataset.toolName;
-        if (toolId) {
-          toggleFavorite(toolId, toolName);
-        }
+        if (toolId) toggleFavorite(toolId, toolName);
+        return;
+      }
+
+      // Editar
+      const editBtn = e.target.closest('.btn-card-edit');
+      if (editBtn) {
+        e.preventDefault();
+        const toolId = editBtn.dataset.toolId;
+        if (toolId) openEditToolModal(toolId);
+        return;
+      }
+
+      // Borrar
+      const deleteBtn = e.target.closest('.btn-card-delete');
+      if (deleteBtn) {
+        e.preventDefault();
+        const toolId = deleteBtn.dataset.toolId;
+        const toolName = deleteBtn.dataset.toolName;
+        if (toolId) promptDeleteTool(toolId, toolName);
+        return;
       }
     });
 
-    // 6. Botón de verificación rápida de enlace
-    DOM.btnQuickVerify.addEventListener('click', handleQuickVerifyClick);
+    // 6. Botones de Modo Edición
+    DOM.btnToggleEdit.addEventListener('click', toggleEditMode);
+    DOM.btnAdminAddTool.addEventListener('click', openAddToolModal);
+    if (DOM.btnEmptyAddTool) {
+      DOM.btnEmptyAddTool.addEventListener('click', openAddToolModal);
+    }
+    DOM.btnAdminExportData.addEventListener('click', exportDataToClipboard);
+    DOM.btnAdminResetData.addEventListener('click', () => {
+      if (confirm('¿Deseas restablecer el catálogo original de 11 herramientas? Se descartarán los cambios no exportados.')) {
+        resetCatalogToDefault();
+      }
+    });
 
-    // 7. Modal de verificación rápida
+    // 7. Modales de Edición y Borrado
+    DOM.toolEditorForm.addEventListener('submit', handleSaveToolSubmit);
+    DOM.modalEditorCloseBtn.addEventListener('click', closeToolEditorModal);
+    DOM.modalEditorCancelBtn.addEventListener('click', closeToolEditorModal);
+    DOM.toolEditorModal.addEventListener('click', (e) => {
+      if (e.target === DOM.toolEditorModal) closeToolEditorModal();
+    });
+
+    DOM.modalDeleteCloseBtn.addEventListener('click', closeDeleteConfirmModal);
+    DOM.modalDeleteCancelBtn.addEventListener('click', closeDeleteConfirmModal);
+    DOM.modalDeleteConfirmBtn.addEventListener('click', confirmDeleteTool);
+    DOM.deleteConfirmModal.addEventListener('click', (e) => {
+      if (e.target === DOM.deleteConfirmModal) closeDeleteConfirmModal();
+    });
+
+    // 8. Botón y Modal de Verificación Rápida
+    DOM.btnQuickVerify.addEventListener('click', handleQuickVerifyClick);
     DOM.modalCloseBtn.addEventListener('click', closeVerifyModal);
     DOM.verifyModal.addEventListener('click', (e) => {
-      if (e.target === DOM.verifyModal) {
-        closeVerifyModal();
-      }
+      if (e.target === DOM.verifyModal) closeVerifyModal();
     });
-
-    // Cerrar modal con tecla Escape
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && DOM.verifyModal.classList.contains('open')) {
-        closeVerifyModal();
-      }
-    });
-
-    // Formulario de verificación en modal
     DOM.verifyForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const urlVal = DOM.verifyUrlInput.value.trim();
       executeVerification(urlVal);
     });
-
     DOM.btnModalPasteClipboard.addEventListener('click', pasteIntoModalFromClipboard);
 
-    // 8. Cerrar Banner informativo
+    // 9. Banner
     DOM.bannerDismissBtn.addEventListener('click', () => {
       DOM.quickDetectBanner.classList.remove('visible');
+    });
+
+    // Escape para cerrar cualquier modal abierto
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (DOM.toolEditorModal.classList.contains('open')) closeToolEditorModal();
+        if (DOM.deleteConfirmModal.classList.contains('open')) closeDeleteConfirmModal();
+        if (DOM.verifyModal.classList.contains('open')) closeVerifyModal();
+      }
     });
   }
 

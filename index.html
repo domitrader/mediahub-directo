@@ -29,7 +29,7 @@
   <!-- Estilos CSS3 Modulares -->
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="edit-mode-active">
 
   <!-- ==========================================================================
        CABECERA COMPACTA
@@ -51,6 +51,15 @@
             <h1 class="site-title">MediaHub <span class="accent">Directo</span></h1>
             <p class="site-subtitle">Acceso directo a descargadores web gratuitos sin registro, ordenados por plataforma.</p>
           </div>
+        </div>
+
+        <!-- Botón para alternar modo edición rápida -->
+        <div class="brand-edit-toggle">
+          <button id="btn-toggle-edit" class="btn-toggle-edit" type="button" aria-pressed="true" title="Activar o desactivar botones de edición y borrado">
+            <span class="icon">🛠️</span>
+            <span class="toggle-text">Modo Edición</span>
+            <span class="status-indicator"></span>
+          </button>
         </div>
       </div>
 
@@ -81,6 +90,29 @@
 
     </div>
   </header>
+
+  <!-- ==========================================================================
+       BARRA DE GESTIÓN / EDICIÓN ACTIVA
+       ========================================================================== -->
+  <section id="admin-management-bar" class="admin-management-bar">
+    <div class="container admin-bar-content">
+      <div class="admin-bar-info">
+        <span class="admin-badge">🛠️ MODO GESTIÓN ACTIVO</span>
+        <span class="admin-message">Puedes <strong>borrar</strong> enlaces que no sirvan y <strong>poner sitios nuevos</strong>. Todos los cambios se guardan automáticamente.</span>
+      </div>
+      <div class="admin-bar-buttons">
+        <button id="btn-admin-add-tool" class="btn-admin-add" type="button">
+          <span>➕ Añadir Sitio Nuevo</span>
+        </button>
+        <button id="btn-admin-export-data" class="btn-admin-secondary" type="button" title="Copiar catálogo actualizado en formato JSON para guardar">
+          <span>📋 Copiar Datos (JSON)</span>
+        </button>
+        <button id="btn-admin-reset-data" class="btn-admin-danger" type="button" title="Restablecer el catálogo original de 11 herramientas">
+          <span>🔄 Restablecer Originales</span>
+        </button>
+      </div>
+    </div>
+  </section>
 
   <!-- ==========================================================================
        BARRA DE FILTROS HORIZONTALES (Pills deslizables)
@@ -145,13 +177,107 @@
     <div id="empty-state" class="empty-state" aria-hidden="true">
       <div class="empty-icon" aria-hidden="true">🔎</div>
       <h3 class="empty-title">No encontramos herramientas coincidentes</h3>
-      <p class="empty-desc">Prueba a buscar otro término, cambiar de categoría o restablecer los filtros activos.</p>
-      <button id="btn-reset-filters" class="btn-reset-filters" type="button">
-        <span>Restablecer filtros</span> ↺
-      </button>
+      <p class="empty-desc">Prueba a buscar otro término, cambiar de categoría o añadir una nueva con el botón superior.</p>
+      <div class="empty-actions">
+        <button id="btn-reset-filters" class="btn-reset-filters" type="button">
+          <span>Restablecer filtros</span> ↺
+        </button>
+        <button id="btn-empty-add-tool" class="btn-admin-add" type="button">
+          <span>➕ Añadir Sitio Nuevo</span>
+        </button>
+      </div>
     </div>
 
   </main>
+
+  <!-- ==========================================================================
+       MODAL DE EDICIÓN / AÑADIR SITIO
+       ========================================================================== -->
+  <div id="tool-editor-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-editor-title">
+    <div class="modal-box modal-box-large">
+      <div class="modal-header">
+        <h2 id="modal-editor-title" class="modal-title">
+          <span aria-hidden="true">➕</span> <span id="editor-title-text">Añadir Nuevo Sitio</span>
+        </h2>
+        <button id="modal-editor-close-btn" class="modal-close-btn" type="button" aria-label="Cerrar ventana">✕</button>
+      </div>
+
+      <form id="tool-editor-form" class="editor-form">
+        <input type="hidden" id="form-tool-id">
+
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="form-tool-name" class="form-label">Nombre del sitio *</label>
+            <input type="text" id="form-tool-name" class="modal-input" placeholder="Ej: SnapSave, Cobalt..." required>
+          </div>
+          <div class="form-group flex-1">
+            <label for="form-tool-category" class="form-label">Categoría *</label>
+            <select id="form-tool-category" class="modal-input modal-select" required>
+              <option value="multiplataforma">Multiplataforma</option>
+              <option value="youtube">YouTube</option>
+              <option value="x-twitter">X (Twitter)</option>
+              <option value="instagram">Instagram</option>
+              <option value="tiktok-fb">TikTok y Facebook</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="form-tool-url" class="form-label">URL del sitio (enlace web) *</label>
+          <input type="url" id="form-tool-url" class="modal-input" placeholder="https://ejemplo.com" required>
+        </div>
+
+        <div class="form-group">
+          <label for="form-tool-platforms" class="form-label">Plataformas compatibles (separadas por comas)</label>
+          <input type="text" id="form-tool-platforms" class="modal-input" placeholder="YouTube, Instagram, TikTok, Facebook...">
+        </div>
+
+        <div class="form-group">
+          <label for="form-tool-desc" class="form-label">Descripción breve *</label>
+          <textarea id="form-tool-desc" class="modal-input modal-textarea" rows="2" placeholder="Describe brevemente qué formatos descarga o cómo funciona..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="form-tool-badges" class="form-label">Etiquetas / Badges (separadas por comas)</label>
+          <input type="text" id="form-tool-badges" class="modal-input" placeholder="Gratis, Sin registro, Sin anuncios, MP4, MP3...">
+          <small class="form-help">Tip: Incluye <code>Sin anuncios</code> para badge cian o <code>Con anuncios</code> para badge de advertencia.</small>
+        </div>
+
+        <div class="form-checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="form-tool-featured">
+            <span>Marcar con insignia dorada <strong>★ Recomendada</strong></span>
+          </label>
+        </div>
+
+        <div class="modal-form-actions">
+          <button type="button" id="modal-editor-cancel-btn" class="btn-modal-secondary">Cancelar</button>
+          <button type="submit" id="modal-editor-submit-btn" class="modal-btn-submit">Guardar Sitio</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL DE CONFIRMACIÓN DE BORRADO
+       ========================================================================== -->
+  <div id="delete-confirm-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-delete-title">
+    <div class="modal-box modal-box-danger">
+      <div class="modal-header">
+        <h2 id="modal-delete-title" class="modal-title" style="color: #EF4444;">
+          <span aria-hidden="true">🗑️</span> Confirmar eliminación
+        </h2>
+        <button id="modal-delete-close-btn" class="modal-close-btn" type="button" aria-label="Cerrar">✕</button>
+      </div>
+      <p class="modal-desc" id="delete-confirm-message">
+        ¿Estás seguro de que deseas eliminar este sitio del directorio?
+      </p>
+      <div class="modal-form-actions">
+        <button type="button" id="modal-delete-cancel-btn" class="btn-modal-secondary">Cancelar</button>
+        <button type="button" id="modal-delete-confirm-btn" class="btn-modal-danger">Eliminar Sitio</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ==========================================================================
        MODAL DE VERIFICACIÓN RÁPIDA / PEGAR ENLACE
@@ -221,7 +347,7 @@
         </div>
         <div class="footer-links">
           <a href="#main-content" class="footer-link">Subir ↑</a>
-          <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub</a>
+          <a href="https://github.com/domitrader/mediahub-directo" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub</a>
           <span class="footer-link">PWA Ready ⚡</span>
         </div>
       </div>
